@@ -218,4 +218,4 @@ const interval = setInterval(() => {
   } else {
     // console.log('not done');
   }
-}, 5 * 1000);
+}, 1 * 1000);
