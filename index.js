@@ -204,6 +204,7 @@ start();
 // Have to do this so the process doesn't exit before all requests have completed
 const interval = setInterval(() => {
   if (completed >= proxies.length) {
+    completed = 0;
     chunksCompleted += 1;
 
     if (chunks.length > 0) {
