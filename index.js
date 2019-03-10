@@ -13,6 +13,8 @@ const {
   timeout
 } = require('./config');
 
+let completed = 0;
+const proxies = [];
 const times = {};
 
 // Jetty Colors
@@ -124,7 +126,6 @@ const updateLine = (index, proxy, message, time = false) => {
 const formatProxies = () => {
   const rawProxies = fs.readFileSync('./proxies.txt', 'utf-8');
   const split = rawProxies.trim().split('\n');
-  const proxies = [];
 
   for (const p of split) {
     const parts = p.trim().split(':');
@@ -133,8 +134,6 @@ const formatProxies = () => {
       ip, port, user, pass
     });
   }
-
-  return proxies;
 };
 
 // Test a proxy
@@ -145,20 +144,24 @@ const test = async (index, proxy) => {
   try {
     const response = await rp(Object.assign({ proxy }, getOptions()));
 
+    completed += 1;
+
     const now = new Date().getTime();
     const time = now - times[index];
 
     updateLine(index, proxy, response.statusCode.toString(), time);
   } catch (e) {
+    completed += 1;
+
     const now = new Date().getTime();
     const time = ((now - times[index]) / 1000).toFixed(3);
-    updateLine(index, proxy, e.statusCode.toString() || e.message, time);
+    updateLine(index, proxy, e.statusCode || e.message, time);
   }
 };
 
 // Run em all
 const run = async () => {
-  const proxies = formatProxies();
+  formatProxies();
 
   for (let i = 0; i < proxies.length; i += 1) {
     const p = proxies[i];
@@ -175,3 +178,14 @@ const run = async () => {
 };
 
 run();
+
+// Have to do this so the process doesn't exit before all requests have completed
+const interval = setInterval(() => {
+  if (completed >= proxies.length) {
+    tty.moveTo([proxies.length + 1, 0]);
+    console.log('============ DONE! ============');
+    clearInterval(interval);
+  } else {
+    // console.log('not done');
+  }
+}, 5 * 1000);
