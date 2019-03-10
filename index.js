@@ -96,7 +96,7 @@ const getMessageStyle = (message) => {
 const updateLine = (index, proxy, message, time = false) => {
   let p = proxy.replace('http://', '');
   if (p.includes('@')) [, p] = p.split('@');
-  const i = `000${index}`.substr(0, 4);
+  const i = `000${index}`.slice(-4);
 
   if (time) {
     const timeStyle = getTimeStyle(time);
