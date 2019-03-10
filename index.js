@@ -14,7 +14,10 @@ const {
 } = require('./config');
 
 let completed = 0;
-const proxies = [];
+const limit = process.stdout.rows - 1;
+let proxies = [];
+let chunks = [];
+let chunksCompleted = 0;
 const times = {};
 
 // Jetty Colors
@@ -98,7 +101,7 @@ const getMessageStyle = (message) => {
 const updateLine = (index, proxy, message, time = false) => {
   let p = proxy.replace('http://', '');
   if (p.includes('@')) [, p] = p.split('@');
-  const i = `000${index}`.slice(-4);
+  const i = `000${chunksCompleted * limit + index}`.slice(-4);
 
   if (time) {
     const timeStyle = getTimeStyle(time);
@@ -136,6 +139,18 @@ const formatProxies = () => {
   }
 };
 
+// Groups proxies into chunks
+const blowChunks = () => {
+  const fullChunks = Math.floor(proxies.length / limit);
+  const lastChunk = proxies.length % limit;
+
+  for (let i = 0; i < fullChunks; i += 1) {
+    chunks.push(proxies.slice(i * limit, i * limit + limit));
+  }
+
+  chunks.push(proxies.slice(fullChunks * limit, fullChunks * limit + lastChunk));
+};
+
 // Test a proxy
 const test = async (index, proxy) => {
   updateLine(index, proxy, 'Running...');
@@ -161,7 +176,7 @@ const test = async (index, proxy) => {
 
 // Run em all
 const run = async () => {
-  formatProxies();
+  proxies = chunks.shift();
 
   for (let i = 0; i < proxies.length; i += 1) {
     const p = proxies[i];
@@ -177,11 +192,25 @@ const run = async () => {
   }
 };
 
-run();
+const start = async () => {
+  formatProxies();
+  blowChunks();
+
+  run();
+}
+
+start();
 
 // Have to do this so the process doesn't exit before all requests have completed
 const interval = setInterval(() => {
   if (completed >= proxies.length) {
+    chunksCompleted += 1;
+
+    if (chunks.length > 0) {
+      tty.reset().clear().moveTo([0, 0]);
+      return run();
+    }
+
     tty.moveTo([proxies.length + 1, 0]);
     console.log('============ DONE! ============');
     clearInterval(interval);
